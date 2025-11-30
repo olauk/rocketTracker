@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakett Tracker - Video Telemetri Analyse</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Rakett Tracker</h1>
+            <p>Analyser modellraketter med video-basert telemetri</p>
+        </header>
+
+        <main>
+            <!-- Fase 1: Last opp video -->
+            <section id="upload-section" class="card">
+                <h2>1. Last opp video</h2>
+                <input type="file" id="videoInput" accept="video/*">
+                <div id="video-info"></div>
+            </section>
+
+            <!-- Fase 2: Kalibrering -->
+            <section id="calibration-section" class="card hidden">
+                <h2>2. Kalibrering</h2>
+                <p>Merk referansepinnen (1 meter) i første ramme</p>
+                <div class="instruction">
+                    <strong>Instruksjon:</strong> Klikk og dra for å tegne en linje langs 1-meter pinnen
+                </div>
+                <div class="canvas-container">
+                    <canvas id="calibrationCanvas"></canvas>
+                </div>
+                <div class="controls">
+                    <button id="resetCalibration" class="btn btn-secondary">Reset</button>
+                    <button id="confirmCalibration" class="btn btn-primary" disabled>Bekreft kalibrering</button>
+                </div>
+                <div id="calibration-info"></div>
+            </section>
+
+            <!-- Fase 3: Rakett-markering -->
+            <section id="roi-section" class="card hidden">
+                <h2>3. Merk raketten</h2>
+                <p>Tegn en boks rundt raketten i første ramme</p>
+                <div class="instruction">
+                    <strong>Instruksjon:</strong> Klikk og dra for å tegne en boks rundt raketten
+                </div>
+                <div class="canvas-container">
+                    <canvas id="roiCanvas"></canvas>
+                </div>
+                <div class="controls">
+                    <button id="resetROI" class="btn btn-secondary">Reset</button>
+                    <button id="startTracking" class="btn btn-primary" disabled>Start tracking</button>
+                </div>
+            </section>
+
+            <!-- Fase 4: Tracking og analyse -->
+            <section id="tracking-section" class="card hidden">
+                <h2>4. Tracking og analyse</h2>
+                <div class="canvas-container">
+                    <canvas id="trackingCanvas"></canvas>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressBar" class="progress-fill"></div>
+                    </div>
+                    <span id="progressText">0%</span>
+                </div>
+                <div class="controls">
+                    <button id="pauseTracking" class="btn btn-secondary">Pause</button>
+                    <button id="stopTracking" class="btn btn-secondary">Stopp</button>
+                </div>
+                <div id="tracking-status"></div>
+            </section>
+
+            <!-- Fase 5: Resultater -->
+            <section id="results-section" class="card hidden">
+                <h2>5. Resultater</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Maks høyde</h3>
+                        <div class="stat-value" id="maxAltitude">-</div>
+                        <div class="stat-unit">meter</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Maks hastighet</h3>
+                        <div class="stat-value" id="maxVelocity">-</div>
+                        <div class="stat-unit">m/s</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Maks akselerasjon</h3>
+                        <div class="stat-value" id="maxAcceleration">-</div>
+                        <div class="stat-unit">m/s²</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Tid til apogee</h3>
+                        <div class="stat-value" id="timeToApogee">-</div>
+                        <div class="stat-unit">sekunder</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Høyde over tid</h3>
+                        <canvas id="altitudeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Hastighet over tid</h3>
+                        <canvas id="velocityChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Akselerasjon over tid</h3>
+                        <canvas id="accelerationChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Banekurve (2D)</h3>
+                        <canvas id="trajectoryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button id="exportCSV" class="btn btn-primary">Eksporter til CSV</button>
+                    <button id="exportVideo" class="btn btn-primary">Eksporter video med tracking</button>
+                    <button id="restart" class="btn btn-secondary">Ny analyse</button>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Rakett Tracker - Laget med OpenCV.js</p>
+        </footer>
+    </div>
+
+    <!-- Hidden video element -->
+    <video id="videoElement" style="display: none;"></video>
+
+    <!-- Scripts -->
+    <script src="js/telemetry.js"></script>
+    <script src="js/tracker.js"></script>
+    <script src="js/visualization.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "rakett-tracker",
+  "version": "1.0.0",
+  "description": "Web-basert rakett-tracking med video telemetri analyse",
+  "main": "public/index.html",
+  "scripts": {
+    "start": "cd public && python -m http.server 8000",
+    "serve": "cd public && npx http-server -p 8000 -o"
+  },
+  "keywords": [
+    "rocket",
+    "tracking",
+    "computer-vision",
+    "opencv",
+    "telemetry"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
