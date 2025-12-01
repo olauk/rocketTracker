@@ -1,6 +1,6 @@
 # 🚀 Rakett Tracker
 
-En web-basert applikasjon for å tracke og analysere modellraketter fra video. Programmet bruker datamaskinsyn (OpenCV.js) til å følge raketten gjennom videoen og beregne telemetri som høyde, hastighet, og akselerasjon.
+En web-basert applikasjon for å tracke og analysere modellraketter fra video. Programmet bruker datamaskinsyn (OpenCV.js) til å følge raketten gjennom videoen og beregne telemetri som høyde, hastighet, og akselerasjon. Vibekodet av Ola Kleiven med Claude Code. Praktisk uttesting av applikasjonen gjenstår. 
 
 ## 🎯 Funksjoner
 
