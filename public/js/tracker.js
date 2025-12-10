@@ -16,8 +16,14 @@ class RocketTracker {
         this.onProgress = null;
         this.onComplete = null;
         this.onTrackingUpdate = null;
+        this.onTrackingLost = null;
         this.trackingData = [];
         this.fps = 30; // Standard, vil bli oppdatert
+        this.waitingForManualInput = false;
+        this.hasManualPoint = false;
+        this.manualPoint = null;
+        this.consecutiveFailures = 0;
+        this.maxConsecutiveFailures = 5; // Antall feil før vi stopper
     }
 
     /**
@@ -229,6 +235,9 @@ class RocketTracker {
                     }
 
                     if (trackedROI) {
+                        // Reset failure counter
+                        this.consecutiveFailures = 0;
+
                         // Lagre tracking data
                         this.trackingData.push({
                             frame: this.currentFrame,
@@ -249,6 +258,21 @@ class RocketTracker {
                         }
                     } else {
                         console.warn('Tracking lost at frame', this.currentFrame);
+                        this.consecutiveFailures++;
+
+                        // Hvis for mange feil, stopp og be om manuell input
+                        if (this.consecutiveFailures >= this.maxConsecutiveFailures) {
+                            this.isPaused = true;
+                            this.waitingForManualInput = true;
+
+                            if (this.onTrackingLost) {
+                                this.onTrackingLost();
+                            }
+
+                            // Stopp videre prosessering til bruker gir manuelt punkt
+                            resolve();
+                            return;
+                        }
                     }
 
                     frame.delete();
@@ -339,6 +363,114 @@ class RocketTracker {
      */
     setFPS(fps) {
         this.fps = fps;
+    }
+
+    /**
+     * Legg til manuelt sporingspunkt
+     */
+    addManualPoint(x, y) {
+        // Bruk samme størrelse som siste kjente ROI
+        const lastData = this.trackingData[this.trackingData.length - 1];
+        const width = lastData ? lastData.width : this.roi.width;
+        const height = lastData ? lastData.height : this.roi.height;
+
+        this.manualPoint = {
+            x: x - width / 2,
+            y: y - height / 2,
+            width: width,
+            height: height
+        };
+
+        this.hasManualPoint = true;
+        console.log('Manuelt punkt satt:', this.manualPoint);
+
+        // Tegn det manuelle punktet
+        this.drawTrackingBox(this.manualPoint);
+    }
+
+    /**
+     * Fortsett tracking etter manuelt punkt
+     */
+    async continueAfterManual() {
+        if (!this.hasManualPoint || !this.manualPoint) {
+            console.error('Ingen manuelt punkt å fortsette fra');
+            return;
+        }
+
+        try {
+            // Lagre det manuelle punktet som tracking data
+            this.trackingData.push({
+                frame: this.currentFrame,
+                time: this.video.currentTime,
+                x: this.manualPoint.x + this.manualPoint.width / 2,
+                y: this.manualPoint.y + this.manualPoint.height / 2,
+                width: this.manualPoint.width,
+                height: this.manualPoint.height,
+                roi: this.manualPoint,
+                manual: true // Marker som manuelt punkt
+            });
+
+            // Re-initialiser tracker med nytt ROI
+            const frame = this.captureFrame();
+
+            if (this.tracker) {
+                // Slett gammel tracker
+                this.tracker.delete();
+
+                // Opprett ny tracker
+                if (cv.TrackerCSRT) {
+                    this.tracker = cv.TrackerCSRT.create();
+                } else if (cv.legacy && cv.legacy.TrackerCSRT) {
+                    this.tracker = cv.legacy.TrackerCSRT.create();
+                } else if (cv.TrackerKCF) {
+                    this.tracker = cv.TrackerKCF.create();
+                } else if (cv.legacy && cv.legacy.TrackerKCF) {
+                    this.tracker = cv.legacy.TrackerKCF.create();
+                }
+
+                if (this.tracker) {
+                    const rect = new cv.Rect(
+                        Math.round(this.manualPoint.x),
+                        Math.round(this.manualPoint.y),
+                        Math.round(this.manualPoint.width),
+                        Math.round(this.manualPoint.height)
+                    );
+                    this.tracker.init(frame, rect);
+                }
+            } else {
+                // Oppdater template for template matching
+                const rect = new cv.Rect(
+                    Math.round(this.manualPoint.x),
+                    Math.round(this.manualPoint.y),
+                    Math.round(this.manualPoint.width),
+                    Math.round(this.manualPoint.height)
+                );
+
+                if (this.template) {
+                    this.template.delete();
+                }
+
+                this.template = frame.roi(rect);
+                this.templateSize = { width: this.manualPoint.width, height: this.manualPoint.height };
+            }
+
+            frame.delete();
+
+            // Reset states
+            this.waitingForManualInput = false;
+            this.hasManualPoint = false;
+            this.manualPoint = null;
+            this.consecutiveFailures = 0;
+            this.isPaused = false;
+
+            // Fortsett til neste frame
+            this.currentFrame++;
+
+            // Fortsett tracking
+            await this.processNextFrame();
+        } catch (error) {
+            console.error('Feil ved fortsettelse av tracking:', error);
+        }
     }
 
     /**

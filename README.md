@@ -5,8 +5,10 @@ En web-basert applikasjon for å tracke og analysere modellraketter fra video. P
 ## 🎯 Funksjoner
 
 - **Video-opplasting**: Last opp video fra mobiltelefon eller annet kamera
-- **Kalibrering**: Bruk en 1-meter referansepinne for nøyaktige målinger
+- **Konfigurerbar FPS**: Angi riktig FPS for videoen (24-240 FPS støttes)
+- **Fleksibel kalibrering**: Bruk ethvert referanseobjekt med kjent lengde (ikke bare 1 meter)
 - **Automatisk tracking**: Track raketten automatisk gjennom hele videoen
+- **Manuell tracking**: Legg til manuelle sporingspunkter hvis automatisk tracking mister objektet
 - **Telemetri-beregning**:
   - Høyde over tid
   - Hastighet (vertikal, horisontal, total)
@@ -65,12 +67,18 @@ Noen nettlesere tillater å åpne `public/index.html` direkte. Dette kan ha begr
 - Klikk på "Velg fil" og last opp videoen din
 - Støttede formater: MP4, MOV, AVI, WebM
 - Anbefalt: Video filmet fra siden med stasjonært kamera
+- **Juster FPS**: Angi riktig FPS for videoen din (standard: 30)
+  - Sjekk i kamera-innstillingene eller video-egenskapene
+  - Vanlige verdier: 24, 25, 30, 50, 60, 120
 
 #### Steg 2: Kalibrering
 - Du vil se første ramme av videoen
-- **Merk referansepinnen** (1 meter):
-  - Klikk og hold musknappen nede ved pinnens bunn
-  - Dra til pinnens topp
+- **Oppgi referanselengde**: Angi lengden på referanseobjektet (standard: 1 meter)
+  - Kan være en pinne, et målbånd, eller et annet objekt med kjent lengde
+  - Eksempel: 0.5m, 1.0m, 2.0m
+- **Merk referanseobjektet**:
+  - Klikk og hold musknappen nede ved objektets ene ende
+  - Dra til objektets andre ende
   - Slipp musknappen
 - Applikasjonen beregner automatisk piksel-til-meter ratio
 - Klikk "Bekreft kalibrering"
@@ -88,6 +96,12 @@ Noen nettlesere tillater å åpne `public/index.html` direkte. Dette kan ha begr
 - Du kan se fremdriften i prosent-baren
 - Bruk "Pause" for å pause prosessen
 - Bruk "Stopp" for å avbryte
+- **Manuell tracking** (valgfritt):
+  - Aktiver "Aktiver manuell tracking" før du starter
+  - Hvis tracking mister raketten (etter 5 feil på rad), vil applikasjonen stoppe
+  - Klikk på rakettens posisjon i bildet for å legge til et manuelt sporingspunkt
+  - Trykk "Fortsett tracking" for å gjenoppta automatisk tracking fra det nye punktet
+  - Dette er nyttig hvis raketten forsvinner bak skyer eller ved dårlig kontrast
 
 #### Steg 5: Resultater
 - Når tracking er ferdig, vises resultatene:

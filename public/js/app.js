@@ -68,6 +68,9 @@ function setupEventListeners() {
     // Video upload
     document.getElementById('videoInput').addEventListener('change', handleVideoUpload);
 
+    // FPS input
+    document.getElementById('fpsInput').addEventListener('change', handleFPSChange);
+
     // Calibration
     document.getElementById('resetCalibration').addEventListener('click', resetCalibration);
     document.getElementById('confirmCalibration').addEventListener('click', confirmCalibration);
@@ -78,6 +81,7 @@ function setupEventListeners() {
 
     // Tracking controls
     document.getElementById('pauseTracking').addEventListener('click', pauseTracking);
+    document.getElementById('continueTracking').addEventListener('click', continueTracking);
     document.getElementById('stopTracking').addEventListener('click', stopTracking);
 
     // Results
@@ -103,18 +107,35 @@ function handleVideoUpload(event) {
 
         // Estimat FPS (standard er 30, men kan prøve å detektere)
         app.fps = 30;
+        document.getElementById('fpsInput').value = app.fps;
 
         document.getElementById('video-info').innerHTML = `
             <strong>Video lastet:</strong><br>
             Oppløsning: ${width}x${height}<br>
-            Varighet: ${duration.toFixed(2)}s<br>
-            Estimert FPS: ${app.fps}
+            Varighet: ${duration.toFixed(2)}s
         `;
+
+        // Show FPS config
+        document.getElementById('fps-config').classList.remove('hidden');
 
         // Show calibration section
         showSection('calibration');
         initializeCalibration();
     };
+}
+
+/**
+ * Handle FPS change
+ */
+function handleFPSChange(event) {
+    const fps = parseInt(event.target.value);
+    if (fps > 0 && fps <= 240) {
+        app.fps = fps;
+        console.log('FPS satt til:', app.fps);
+    } else {
+        alert('FPS må være mellom 1 og 240');
+        event.target.value = app.fps;
+    }
 }
 
 /**
@@ -239,11 +260,20 @@ function calculateCalibration() {
     const dy = app.calibration.endPoint.y - app.calibration.startPoint.y;
     const pixelLength = Math.sqrt(dx * dx + dy * dy);
 
-    // 1 meter reference
-    app.calibration.pixelToMeterRatio = pixelLength / 1.0;
+    // Get reference length from input
+    const referenceLength = parseFloat(document.getElementById('referenceLengthInput').value);
+
+    if (!referenceLength || referenceLength <= 0) {
+        alert('Vennligst oppgi en gyldig referanselengde');
+        return;
+    }
+
+    app.calibration.pixelToMeterRatio = pixelLength / referenceLength;
+    app.calibration.referenceLength = referenceLength;
 
     document.getElementById('calibration-info').innerHTML = `
         <strong>Kalibrering:</strong><br>
+        Referanselengde: ${referenceLength.toFixed(2)} meter<br>
         Linje-lengde: ${pixelLength.toFixed(1)} piksler<br>
         Ratio: ${app.calibration.pixelToMeterRatio.toFixed(2)} piksler/meter<br>
         1 piksel = ${(1 / app.calibration.pixelToMeterRatio).toFixed(4)} meter
@@ -417,10 +447,37 @@ async function startTracking() {
         `;
     };
 
+    app.tracker.onTrackingLost = () => {
+        console.log('Tracking mistet!');
+        const manualEnabled = document.getElementById('enableManualTracking').checked;
+
+        if (manualEnabled) {
+            // Show manual tracking hint
+            document.getElementById('manual-tracking-hint').style.display = 'block';
+            document.getElementById('continueTracking').style.display = 'inline-block';
+
+            // Update status
+            document.getElementById('tracking-status').innerHTML = `
+                <strong>⚠️ Tracking mistet!</strong><br>
+                Klikk på raketten i bildet for å legge til et manuelt sporingspunkt.
+            `;
+        } else {
+            // Just stop tracking
+            document.getElementById('tracking-status').innerHTML = `
+                <strong>⚠️ Tracking mistet!</strong><br>
+                Aktiver "Aktiver manuell tracking" og prøv igjen for å fortsette manuelt.
+            `;
+        }
+    };
+
     app.tracker.onComplete = (trackingData) => {
         console.log('Tracking fullført!', trackingData);
         processTrackingData(trackingData);
     };
+
+    // Setup manual tracking click handler
+    const trackingCanvas = document.getElementById('trackingCanvas');
+    trackingCanvas.addEventListener('click', handleManualTrackingClick);
 
     // Initialize and start
     try {
@@ -444,6 +501,42 @@ function pauseTracking() {
             app.tracker.pause();
             document.getElementById('pauseTracking').textContent = 'Resume';
         }
+    }
+}
+
+/**
+ * Handle manual tracking click
+ */
+function handleManualTrackingClick(event) {
+    if (!app.tracker || !app.tracker.waitingForManualInput) return;
+
+    const canvas = event.target;
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+    console.log('Manuelt sporingspunkt lagt til:', x, y);
+
+    // Add manual point to tracker
+    app.tracker.addManualPoint(x, y);
+
+    // Hide manual tracking hint
+    document.getElementById('manual-tracking-hint').style.display = 'none';
+
+    // Update status
+    document.getElementById('tracking-status').innerHTML = `
+        <strong>✓ Manuelt punkt lagt til</strong><br>
+        Trykk "Fortsett tracking" for å gjenoppta automatisk tracking.
+    `;
+}
+
+/**
+ * Continue tracking after manual point
+ */
+function continueTracking() {
+    if (app.tracker && app.tracker.hasManualPoint) {
+        document.getElementById('continueTracking').style.display = 'none';
+        app.tracker.continueAfterManual();
     }
 }
 

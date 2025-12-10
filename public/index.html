@@ -21,14 +21,28 @@
                 <h2>1. Last opp video</h2>
                 <input type="file" id="videoInput" accept="video/*">
                 <div id="video-info"></div>
+                <div id="fps-config" class="config-section hidden">
+                    <label for="fpsInput">
+                        <strong>FPS (Frames per sekund):</strong>
+                        <input type="number" id="fpsInput" min="1" max="240" value="30" step="1">
+                    </label>
+                    <p class="help-text">Standard: 30 FPS. Juster hvis videoen din har annen hastighet (f.eks. 60 FPS).</p>
+                </div>
             </section>
 
             <!-- Fase 2: Kalibrering -->
             <section id="calibration-section" class="card hidden">
                 <h2>2. Kalibrering</h2>
-                <p>Merk referansepinnen (1 meter) i første ramme</p>
+                <div class="config-section">
+                    <label for="referenceLengthInput">
+                        <strong>Referanselengde (meter):</strong>
+                        <input type="number" id="referenceLengthInput" min="0.1" max="100" value="1.0" step="0.1">
+                    </label>
+                    <p class="help-text">Oppgi lengden på objektet du skal markere (standard: 1 meter).</p>
+                </div>
+                <p>Merk referanselengden i første ramme</p>
                 <div class="instruction">
-                    <strong>Instruksjon:</strong> Klikk og dra for å tegne en linje langs 1-meter pinnen
+                    <strong>Instruksjon:</strong> Klikk og dra for å tegne en linje langs referanseobjektet
                 </div>
                 <div class="canvas-container">
                     <canvas id="calibrationCanvas"></canvas>
@@ -59,6 +73,9 @@
             <!-- Fase 4: Tracking og analyse -->
             <section id="tracking-section" class="card hidden">
                 <h2>4. Tracking og analyse</h2>
+                <div class="instruction" id="manual-tracking-hint" style="display: none;">
+                    <strong>💡 Manuell tracking:</strong> Tracking har stoppet. Klikk på raketten i bildet for å legge til et manuelt sporingspunkt, deretter trykk "Fortsett" for å gjenoppta automatisk tracking.
+                </div>
                 <div class="canvas-container">
                     <canvas id="trackingCanvas"></canvas>
                 </div>
@@ -70,7 +87,12 @@
                 </div>
                 <div class="controls">
                     <button id="pauseTracking" class="btn btn-secondary">Pause</button>
+                    <button id="continueTracking" class="btn btn-primary" style="display: none;">Fortsett tracking</button>
                     <button id="stopTracking" class="btn btn-secondary">Stopp</button>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableManualTracking">
+                        Aktiver manuell tracking
+                    </label>
                 </div>
                 <div id="tracking-status"></div>
             </section>
