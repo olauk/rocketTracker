@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakett Tracker - Diagnostikk</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f0f0f0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Rakett Tracker - Diagnostikk</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Enkel video-opplasting</h2>
+        <input type="file" id="simpleVideoInput" accept="video/*">
+        <div id="simpleResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Video metadata</h2>
+        <video id="testVideo" style="display: none;"></video>
+        <div id="metadataResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Event listeners</h2>
+        <button id="testButton">Klikk meg</button>
+        <div id="buttonResult"></div>
+    </div>
+
+    <div id="log">
+        <strong>Console Log:</strong><br>
+    </div>
+
+    <script>
+        // Override console.log to show in page
+        const logDiv = document.getElementById('log');
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logDiv.innerHTML += args.join(' ') + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logDiv.innerHTML += '<span style="color: red;">[ERROR] ' + args.join(' ') + '</span><br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+
+        console.log('🚀 Diagnostikk startet');
+
+        // Test 1: Simple file input
+        const simpleInput = document.getElementById('simpleVideoInput');
+        if (simpleInput) {
+            console.log('✓ Simple input element found');
+
+            simpleInput.addEventListener('change', function(event) {
+                console.log('✓ File input change event fired!');
+                const file = event.target.files[0];
+
+                if (file) {
+                    console.log('✓ File selected:', file.name, file.type, file.size);
+                    document.getElementById('simpleResult').innerHTML =
+                        '<span class="success">✓ Fil valgt: ' + file.name + '</span>';
+
+                    // Test 2: Load video metadata
+                    const video = document.getElementById('testVideo');
+                    const url = URL.createObjectURL(file);
+                    video.src = url;
+
+                    video.onerror = function(e) {
+                        console.error('❌ Video load error:', e);
+                        document.getElementById('metadataResult').innerHTML =
+                            '<span class="error">❌ Kunne ikke laste video</span>';
+                    };
+
+                    video.onloadedmetadata = function() {
+                        console.log('✓ Video metadata loaded successfully');
+                        const info = {
+                            duration: video.duration,
+                            width: video.videoWidth,
+                            height: video.videoHeight
+                        };
+                        console.log('Video info:', JSON.stringify(info));
+
+                        document.getElementById('metadataResult').innerHTML =
+                            '<span class="success">✓ Video lastet: ' +
+                            info.width + 'x' + info.height + ', ' +
+                            info.duration.toFixed(2) + 's</span>';
+                    };
+                } else {
+                    console.log('No file selected');
+                }
+            });
+        } else {
+            console.error('❌ Simple input element NOT found!');
+        }
+
+        // Test 3: Button event
+        const testButton = document.getElementById('testButton');
+        if (testButton) {
+            console.log('✓ Test button found');
+
+            testButton.addEventListener('click', function() {
+                console.log('✓ Button clicked!');
+                document.getElementById('buttonResult').innerHTML =
+                    '<span class="success">✓ Klikk registrert!</span>';
+            });
+        } else {
+            console.error('❌ Test button NOT found!');
+        }
+
+        console.log('✅ Diagnostikk setup ferdig - klar for testing');
+    </script>
+</body>
+</html>

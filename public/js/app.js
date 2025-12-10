@@ -35,29 +35,49 @@ function onOpenCvReady() {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Rakett Tracker initialiserer...');
+    console.log('🚀 Rakett Tracker initialiserer...');
+    console.log('DOM fully loaded');
 
-    // Initialize video element
-    app.video = document.getElementById('videoElement');
-
-    // Initialize visualizer
-    app.visualizer = new TelemetryVisualizer();
-
-    // Setup event listeners
-    setupEventListeners();
-
-    // Check if OpenCV is loaded
-    if (typeof cv !== 'undefined') {
-        if (cv.getBuildInformation) {
-            console.log('OpenCV.js er lastet');
-            onOpenCvReady();
-        } else {
-            cv.onRuntimeInitialized = onOpenCvReady;
+    try {
+        // Initialize video element
+        app.video = document.getElementById('videoElement');
+        if (!app.video) {
+            console.error('❌ CRITICAL: videoElement not found in DOM!');
+            alert('Kritisk feil: Video-element mangler. Sjekk at index.html er korrekt.');
+            return;
         }
-    } else {
-        console.log('Venter på OpenCV.js...');
-        // Set global callback
-        window.onOpenCvReady = onOpenCvReady;
+        console.log('✓ Video element initialized');
+
+        // Initialize visualizer
+        try {
+            app.visualizer = new TelemetryVisualizer();
+            console.log('✓ Visualizer initialized');
+        } catch (e) {
+            console.error('❌ Error initializing visualizer:', e);
+            // Continue anyway - visualizer is only needed for results
+        }
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Check if OpenCV is loaded
+        if (typeof cv !== 'undefined') {
+            if (cv.getBuildInformation) {
+                console.log('✓ OpenCV.js er lastet');
+                onOpenCvReady();
+            } else {
+                cv.onRuntimeInitialized = onOpenCvReady;
+            }
+        } else {
+            console.log('⏳ Venter på OpenCV.js...');
+            // Set global callback
+            window.onOpenCvReady = onOpenCvReady;
+        }
+
+        console.log('✅ Rakett Tracker initialization complete!');
+    } catch (error) {
+        console.error('❌ FATAL ERROR during initialization:', error);
+        alert('Kritisk feil ved oppstart: ' + error.message);
     }
 });
 
@@ -65,63 +85,116 @@ document.addEventListener('DOMContentLoaded', function() {
  * Setup alle event listeners
  */
 function setupEventListeners() {
+    console.log('Setting up event listeners...');
+
+    // Helper function to safely add event listener
+    const addListener = (id, event, handler) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener(event, handler);
+            console.log(`✓ Event listener added for ${id}`);
+        } else {
+            console.warn(`⚠ Element not found: ${id}`);
+        }
+    };
+
     // Video upload
-    document.getElementById('videoInput').addEventListener('change', handleVideoUpload);
+    addListener('videoInput', 'change', handleVideoUpload);
 
     // FPS input
-    document.getElementById('fpsInput').addEventListener('change', handleFPSChange);
+    addListener('fpsInput', 'change', handleFPSChange);
 
     // Calibration
-    document.getElementById('resetCalibration').addEventListener('click', resetCalibration);
-    document.getElementById('confirmCalibration').addEventListener('click', confirmCalibration);
+    addListener('resetCalibration', 'click', resetCalibration);
+    addListener('confirmCalibration', 'click', confirmCalibration);
 
     // ROI selection
-    document.getElementById('resetROI').addEventListener('click', resetROI);
-    document.getElementById('startTracking').addEventListener('click', startTracking);
+    addListener('resetROI', 'click', resetROI);
+    addListener('startTracking', 'click', startTracking);
 
     // Tracking controls
-    document.getElementById('pauseTracking').addEventListener('click', pauseTracking);
-    document.getElementById('continueTracking').addEventListener('click', continueTracking);
-    document.getElementById('stopTracking').addEventListener('click', stopTracking);
+    addListener('pauseTracking', 'click', pauseTracking);
+    addListener('continueTracking', 'click', continueTracking);
+    addListener('stopTracking', 'click', stopTracking);
 
     // Results
-    document.getElementById('exportCSV').addEventListener('click', exportCSV);
-    document.getElementById('exportVideo').addEventListener('click', exportVideo);
-    document.getElementById('restart').addEventListener('click', restart);
+    addListener('exportCSV', 'click', exportCSV);
+    addListener('exportVideo', 'click', exportVideo);
+    addListener('restart', 'click', restart);
+
+    console.log('Event listeners setup complete');
 }
 
 /**
  * Handle video upload
  */
 function handleVideoUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    console.log('handleVideoUpload called');
 
-    const url = URL.createObjectURL(file);
-    app.video.src = url;
+    try {
+        const file = event.target.files[0];
+        if (!file) {
+            console.log('No file selected');
+            return;
+        }
 
-    app.video.onloadedmetadata = function() {
-        const duration = app.video.duration;
-        const width = app.video.videoWidth;
-        const height = app.video.videoHeight;
+        console.log('File selected:', file.name, file.type, file.size);
 
-        // Estimat FPS (standard er 30, men kan prøve å detektere)
-        app.fps = 30;
-        document.getElementById('fpsInput').value = app.fps;
+        // Check if video element exists
+        if (!app.video) {
+            console.error('Video element not found!');
+            alert('Feil: Video-element ikke funnet. Vennligst refresh siden.');
+            return;
+        }
 
-        document.getElementById('video-info').innerHTML = `
-            <strong>Video lastet:</strong><br>
-            Oppløsning: ${width}x${height}<br>
-            Varighet: ${duration.toFixed(2)}s
-        `;
+        const url = URL.createObjectURL(file);
+        app.video.src = url;
 
-        // Show FPS config
-        document.getElementById('fps-config').classList.remove('hidden');
+        app.video.onerror = function(e) {
+            console.error('Video load error:', e);
+            alert('Feil ved lasting av video. Sjekk at formatet er støttet (MP4, MOV, WebM).');
+        };
 
-        // Show calibration section
-        showSection('calibration');
-        initializeCalibration();
-    };
+        app.video.onloadedmetadata = function() {
+            console.log('Video metadata loaded');
+
+            const duration = app.video.duration;
+            const width = app.video.videoWidth;
+            const height = app.video.videoHeight;
+
+            console.log('Video info:', { duration, width, height });
+
+            // Estimat FPS (standard er 30, men kan prøve å detektere)
+            app.fps = 30;
+
+            const fpsInput = document.getElementById('fpsInput');
+            if (fpsInput) {
+                fpsInput.value = app.fps;
+            }
+
+            const videoInfo = document.getElementById('video-info');
+            if (videoInfo) {
+                videoInfo.innerHTML = `
+                    <strong>Video lastet:</strong><br>
+                    Oppløsning: ${width}x${height}<br>
+                    Varighet: ${duration.toFixed(2)}s
+                `;
+            }
+
+            // Show FPS config
+            const fpsConfig = document.getElementById('fps-config');
+            if (fpsConfig) {
+                fpsConfig.classList.remove('hidden');
+            }
+
+            // Show calibration section
+            showSection('calibration');
+            initializeCalibration();
+        };
+    } catch (error) {
+        console.error('Error in handleVideoUpload:', error);
+        alert('Feil ved opplasting av video: ' + error.message);
+    }
 }
 
 /**
