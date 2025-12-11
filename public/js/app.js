@@ -549,7 +549,6 @@ async function startTracking() {
     };
 
     // Setup manual tracking click handler
-    const trackingCanvas = document.getElementById('trackingCanvas');
     trackingCanvas.addEventListener('click', handleManualTrackingClick);
 
     // Initialize and start
