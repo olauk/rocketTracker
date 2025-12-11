@@ -344,16 +344,22 @@ class RocketTracker {
      * Pause tracking
      */
     pause() {
+        console.log('Tracker.pause() called, setting isPaused to true');
         this.isPaused = true;
+        console.log('Tracker.pause() completed, isPaused:', this.isPaused);
     }
 
     /**
      * Resume tracking
      */
     resume() {
+        console.log('Tracker.resume() called, isPaused:', this.isPaused);
         if (this.isPaused) {
             this.isPaused = false;
+            console.log('Tracker.resume() setting isPaused to false, resuming tracking');
             this.processNextFrame();
+        } else {
+            console.log('Tracker.resume() called but was not paused');
         }
     }
 
@@ -422,24 +428,67 @@ class RocketTracker {
      * Seek til current frame og vis den
      */
     async seekToCurrentFrame() {
-        return new Promise((resolve) => {
+        const targetTime = this.currentFrame / this.fps;
+        console.log('seekToCurrentFrame: Seeking to time:', targetTime, 'frame:', this.currentFrame, 'current video time:', this.video.currentTime);
+
+        // Helper function to draw the frame
+        const drawFrame = () => {
+            console.log('drawFrame: Drawing frame at canvas size', this.canvas.width, 'x', this.canvas.height);
+
+            // Ensure canvas has correct dimensions
+            if (this.canvas.width === 0 || this.canvas.height === 0) {
+                console.log('drawFrame: Setting canvas dimensions from video:', this.video.videoWidth, 'x', this.video.videoHeight);
+                this.canvas.width = this.video.videoWidth;
+                this.canvas.height = this.video.videoHeight;
+            }
+
+            // Tegn video frame direkte
+            this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+
+            // Tegn eksisterende tracking punkt hvis det finnes
+            const existingPoint = this.trackingData.find(p => p.frame === this.currentFrame);
+            if (existingPoint && existingPoint.roi) {
+                console.log('drawFrame: Drawing tracking box at', existingPoint.roi);
+                this.drawTrackingBox(existingPoint.roi);
+            } else {
+                console.log('drawFrame: No tracking point for frame', this.currentFrame);
+            }
+        };
+
+        return new Promise((resolve, reject) => {
+            // Add timeout to prevent hanging
+            const timeout = setTimeout(() => {
+                console.error('seekToCurrentFrame: Timeout waiting for onseeked event');
+                this.video.onseeked = null; // Clean up
+                // Try to draw anyway
+                drawFrame();
+                resolve();
+            }, 2000);
+
+            // Check if we're already at the target time (within tolerance)
+            const timeDiff = Math.abs(this.video.currentTime - targetTime);
+            console.log('seekToCurrentFrame: Time difference:', timeDiff);
+
+            if (timeDiff < 0.001) {
+                console.log('seekToCurrentFrame: Already at target time, drawing immediately');
+                clearTimeout(timeout);
+                drawFrame();
+                resolve();
+                return;
+            }
+
+            // Set up onseeked handler
             this.video.onseeked = () => {
-                // Tegn video frame direkte
-                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-
-                // Tegn eksisterende tracking punkt hvis det finnes
-                const existingPoint = this.trackingData.find(p => p.frame === this.currentFrame);
-                if (existingPoint && existingPoint.roi) {
-                    this.drawTrackingBox(existingPoint.roi);
-                }
-
-                console.log('Seeked to frame', this.currentFrame);
+                console.log('seekToCurrentFrame: onseeked event fired');
+                clearTimeout(timeout);
+                this.video.onseeked = null; // Clean up
+                drawFrame();
                 resolve();
             };
 
-            const time = this.currentFrame / this.fps;
-            console.log('Seeking to time:', time, 'frame:', this.currentFrame);
-            this.video.currentTime = time;
+            // Seek to target time
+            console.log('seekToCurrentFrame: Setting video.currentTime to', targetTime);
+            this.video.currentTime = targetTime;
         });
     }
 

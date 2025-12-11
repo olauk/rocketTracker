@@ -571,18 +571,32 @@ async function startTracking() {
  * Pause tracking
  */
 function pauseTracking() {
+    console.log('pauseTracking() called');
     if (app.tracker) {
+        console.log('pauseTracking: tracker exists, current isPaused:', app.tracker.isPaused);
         if (app.tracker.isPaused) {
+            console.log('pauseTracking: Resuming tracking');
             app.tracker.resume();
             document.getElementById('pauseTracking').textContent = 'Pause';
             document.getElementById('frameNavigation').classList.add('hidden');
+            console.log('pauseTracking: Hidden frame navigation');
         } else {
+            console.log('pauseTracking: Pausing tracking');
             app.tracker.pause();
             document.getElementById('pauseTracking').textContent = 'Resume';
             // Vis frame navigation når pauset
-            document.getElementById('frameNavigation').classList.remove('hidden');
+            const frameNav = document.getElementById('frameNavigation');
+            console.log('pauseTracking: Frame navigation element:', frameNav);
+            if (frameNav) {
+                frameNav.classList.remove('hidden');
+                console.log('pauseTracking: Showed frame navigation, classList:', frameNav.classList);
+            } else {
+                console.error('pauseTracking: frameNavigation element not found!');
+            }
             updateFrameInfo();
         }
+    } else {
+        console.warn('pauseTracking: No tracker available');
     }
 }
 
@@ -668,9 +682,17 @@ function stopTracking() {
  * Navigate to previous frame
  */
 async function navigateToPreviousFrame() {
+    console.log('navigateToPreviousFrame() called in app.js');
+    console.log('  app.tracker exists:', !!app.tracker);
+    console.log('  app.tracker.isPaused:', app.tracker ? app.tracker.isPaused : 'N/A');
+
     if (app.tracker && app.tracker.isPaused) {
+        console.log('navigateToPreviousFrame: Calling tracker.previousFrame()');
         await app.tracker.previousFrame();
+        console.log('navigateToPreviousFrame: Returned from tracker.previousFrame()');
         updateFrameInfo();
+    } else {
+        console.warn('navigateToPreviousFrame: Conditions not met - tracker:', !!app.tracker, 'isPaused:', app.tracker ? app.tracker.isPaused : 'N/A');
     }
 }
 
@@ -678,9 +700,17 @@ async function navigateToPreviousFrame() {
  * Navigate to next frame
  */
 async function navigateToNextFrame() {
+    console.log('navigateToNextFrame() called in app.js');
+    console.log('  app.tracker exists:', !!app.tracker);
+    console.log('  app.tracker.isPaused:', app.tracker ? app.tracker.isPaused : 'N/A');
+
     if (app.tracker && app.tracker.isPaused) {
+        console.log('navigateToNextFrame: Calling tracker.nextFrame()');
         await app.tracker.nextFrame();
+        console.log('navigateToNextFrame: Returned from tracker.nextFrame()');
         updateFrameInfo();
+    } else {
+        console.warn('navigateToNextFrame: Conditions not met - tracker:', !!app.tracker, 'isPaused:', app.tracker ? app.tracker.isPaused : 'N/A');
     }
 }
 
@@ -748,18 +778,32 @@ function deletePointAtCurrentFrame() {
  * Update frame info display
  */
 function updateFrameInfo() {
+    console.log('updateFrameInfo() called');
     if (app.tracker) {
+        console.log('updateFrameInfo: Current frame:', app.tracker.currentFrame, 'Total frames:', app.tracker.totalFrames);
+
         const frameInfo = document.getElementById('frameInfo');
+        console.log('updateFrameInfo: frameInfo element:', frameInfo);
         if (frameInfo) {
-            frameInfo.textContent = `Frame: ${app.tracker.currentFrame} / ${app.tracker.totalFrames - 1}`;
+            const text = `Frame: ${app.tracker.currentFrame} / ${app.tracker.totalFrames - 1}`;
+            frameInfo.textContent = text;
+            console.log('updateFrameInfo: Set frameInfo text to:', text);
+        } else {
+            console.error('updateFrameInfo: frameInfo element not found!');
         }
 
         // Check if point exists at current frame
         const hasPoint = app.tracker.trackingData.find(p => p.frame === app.tracker.currentFrame);
+        console.log('updateFrameInfo: Point exists at current frame:', !!hasPoint);
         const deleteBtn = document.getElementById('deletePointAtFrame');
         if (deleteBtn) {
             deleteBtn.disabled = !hasPoint;
+            console.log('updateFrameInfo: Set deleteBtn disabled to:', !hasPoint);
+        } else {
+            console.error('updateFrameInfo: deletePointAtFrame button not found!');
         }
+    } else {
+        console.warn('updateFrameInfo: No tracker available');
     }
 }
 
