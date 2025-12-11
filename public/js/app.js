@@ -118,6 +118,12 @@ function setupEventListeners() {
     addListener('undoManualPoint', 'click', undoManualPoint);
     addListener('stopTracking', 'click', stopTracking);
 
+    // Frame navigation
+    addListener('prevFrame', 'click', navigateToPreviousFrame);
+    addListener('nextFrame', 'click', navigateToNextFrame);
+    addListener('addPointAtFrame', 'click', addPointAtCurrentFrame);
+    addListener('deletePointAtFrame', 'click', deletePointAtCurrentFrame);
+
     // Results
     addListener('exportCSV', 'click', exportCSV);
     addListener('exportVideo', 'click', exportVideo);
@@ -569,9 +575,13 @@ function pauseTracking() {
         if (app.tracker.isPaused) {
             app.tracker.resume();
             document.getElementById('pauseTracking').textContent = 'Pause';
+            document.getElementById('frameNavigation').classList.add('hidden');
         } else {
             app.tracker.pause();
             document.getElementById('pauseTracking').textContent = 'Resume';
+            // Vis frame navigation når pauset
+            document.getElementById('frameNavigation').classList.remove('hidden');
+            updateFrameInfo();
         }
     }
 }
@@ -650,6 +660,106 @@ function undoManualPoint() {
 function stopTracking() {
     if (app.tracker) {
         app.tracker.stop();
+        document.getElementById('frameNavigation').classList.add('hidden');
+    }
+}
+
+/**
+ * Navigate to previous frame
+ */
+async function navigateToPreviousFrame() {
+    if (app.tracker && app.tracker.isPaused) {
+        await app.tracker.previousFrame();
+        updateFrameInfo();
+    }
+}
+
+/**
+ * Navigate to next frame
+ */
+async function navigateToNextFrame() {
+    if (app.tracker && app.tracker.isPaused) {
+        await app.tracker.nextFrame();
+        updateFrameInfo();
+    }
+}
+
+/**
+ * Add tracking point at current frame
+ */
+function addPointAtCurrentFrame() {
+    if (!app.tracker || !app.tracker.isPaused) {
+        alert('Du må pause tracking først');
+        return;
+    }
+
+    // Aktivere click-modus
+    document.getElementById('tracking-status').innerHTML = `
+        <strong>📍 Klikk på raketten</strong><br>
+        Klikk på rakettens posisjon i bildet for å legge til et punkt på denne framen.
+    `;
+
+    // Sett opp click handler
+    const canvas = document.getElementById('trackingCanvas');
+    const clickHandler = (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+        app.tracker.addPointAtCurrentFrame(x, y);
+
+        document.getElementById('tracking-status').innerHTML = `
+            <strong>✓ Punkt lagt til</strong><br>
+            Frame ${app.tracker.currentFrame}: Punkt lagret på (${Math.round(x)}, ${Math.round(y)})
+        `;
+
+        // Fjern click handler
+        canvas.removeEventListener('click', clickHandler);
+    };
+
+    canvas.addEventListener('click', clickHandler, { once: true });
+}
+
+/**
+ * Delete tracking point at current frame
+ */
+function deletePointAtCurrentFrame() {
+    if (!app.tracker || !app.tracker.isPaused) {
+        alert('Du må pause tracking først');
+        return;
+    }
+
+    const deleted = app.tracker.deletePointAtCurrentFrame();
+
+    if (deleted) {
+        document.getElementById('tracking-status').innerHTML = `
+            <strong>🗑️ Punkt slettet</strong><br>
+            Tracking-punkt på frame ${app.tracker.currentFrame} er slettet.
+        `;
+    } else {
+        document.getElementById('tracking-status').innerHTML = `
+            <strong>ℹ️ Ingen punkt å slette</strong><br>
+            Det finnes ingen tracking-punkt på frame ${app.tracker.currentFrame}.
+        `;
+    }
+}
+
+/**
+ * Update frame info display
+ */
+function updateFrameInfo() {
+    if (app.tracker) {
+        const frameInfo = document.getElementById('frameInfo');
+        if (frameInfo) {
+            frameInfo.textContent = `Frame: ${app.tracker.currentFrame} / ${app.tracker.totalFrames - 1}`;
+        }
+
+        // Check if point exists at current frame
+        const hasPoint = app.tracker.trackingData.find(p => p.frame === app.tracker.currentFrame);
+        const deleteBtn = document.getElementById('deletePointAtFrame');
+        if (deleteBtn) {
+            deleteBtn.disabled = !hasPoint;
+        }
     }
 }
 

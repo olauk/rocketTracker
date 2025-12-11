@@ -207,7 +207,12 @@ class RocketTracker {
      * Prosesser neste ramme
      */
     async processNextFrame() {
-        if (!this.isTracking || this.isPaused) {
+        // Check pause/stop state immediately
+        if (!this.isTracking) {
+            return;
+        }
+
+        if (this.isPaused) {
             return;
         }
 
@@ -289,8 +294,10 @@ class RocketTracker {
                     if (nextTime < this.video.duration) {
                         this.video.currentTime = nextTime;
                         resolve();
-                        // Fortsett med neste
-                        setTimeout(() => this.processNextFrame(), 0);
+                        // Sjekk status før vi fortsetter
+                        if (this.isTracking && !this.isPaused) {
+                            setTimeout(() => this.processNextFrame(), 0);
+                        }
                     } else {
                         // Ferdig
                         this.isTracking = false;
@@ -356,6 +363,12 @@ class RocketTracker {
     stop() {
         this.isTracking = false;
         this.isPaused = false;
+
+        // Process data collected so far
+        if (this.trackingData.length > 0 && this.onComplete) {
+            console.log('Stopping tracking and processing', this.trackingData.length, 'frames');
+            this.onComplete(this.trackingData);
+        }
     }
 
     /**
@@ -363,6 +376,123 @@ class RocketTracker {
      */
     setFPS(fps) {
         this.fps = fps;
+    }
+
+    /**
+     * Gå til forrige frame (kun når pauset)
+     */
+    async previousFrame() {
+        if (!this.isPaused) return;
+
+        if (this.currentFrame > 0) {
+            this.currentFrame--;
+            await this.seekToCurrentFrame();
+        }
+    }
+
+    /**
+     * Gå til neste frame (kun når pauset)
+     */
+    async nextFrame() {
+        if (!this.isPaused) return;
+
+        if (this.currentFrame < this.totalFrames - 1) {
+            this.currentFrame++;
+            await this.seekToCurrentFrame();
+        }
+    }
+
+    /**
+     * Seek til current frame og vis den
+     */
+    async seekToCurrentFrame() {
+        return new Promise((resolve) => {
+            this.video.onseeked = () => {
+                const frame = this.captureFrame();
+
+                // Tegn frame
+                this.ctx.drawImage(this.video, 0, 0);
+
+                // Tegn eksisterende tracking punkt hvis det finnes
+                const existingPoint = this.trackingData.find(p => p.frame === this.currentFrame);
+                if (existingPoint && existingPoint.roi) {
+                    this.drawTrackingBox(existingPoint.roi);
+                }
+
+                frame.delete();
+                resolve();
+            };
+
+            const time = this.currentFrame / this.fps;
+            this.video.currentTime = time;
+        });
+    }
+
+    /**
+     * Legg til eller oppdater tracking punkt på current frame
+     */
+    addPointAtCurrentFrame(x, y) {
+        if (!this.isPaused) return;
+
+        // Bruk samme størrelse som siste kjente ROI
+        const lastData = this.trackingData[this.trackingData.length - 1];
+        const width = lastData ? lastData.width : this.roi.width;
+        const height = lastData ? lastData.height : this.roi.height;
+
+        const newPoint = {
+            frame: this.currentFrame,
+            time: this.video.currentTime,
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            roi: {
+                x: x - width / 2,
+                y: y - height / 2,
+                width: width,
+                height: height
+            },
+            manual: true
+        };
+
+        // Sjekk om punkt allerede eksisterer for denne frame
+        const existingIndex = this.trackingData.findIndex(p => p.frame === this.currentFrame);
+        if (existingIndex >= 0) {
+            // Oppdater eksisterende punkt
+            this.trackingData[existingIndex] = newPoint;
+        } else {
+            // Legg til nytt punkt på riktig posisjon (sortert etter frame)
+            let insertIndex = this.trackingData.findIndex(p => p.frame > this.currentFrame);
+            if (insertIndex === -1) {
+                this.trackingData.push(newPoint);
+            } else {
+                this.trackingData.splice(insertIndex, 0, newPoint);
+            }
+        }
+
+        // Tegn punktet
+        this.drawTrackingBox(newPoint.roi);
+
+        return newPoint;
+    }
+
+    /**
+     * Slett tracking punkt på current frame
+     */
+    deletePointAtCurrentFrame() {
+        if (!this.isPaused) return false;
+
+        const index = this.trackingData.findIndex(p => p.frame === this.currentFrame);
+        if (index >= 0) {
+            this.trackingData.splice(index, 1);
+
+            // Redraw frame uten punktet
+            this.ctx.drawImage(this.video, 0, 0);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
