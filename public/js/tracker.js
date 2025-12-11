@@ -6,7 +6,7 @@ class RocketTracker {
     constructor(video, canvas) {
         this.video = video;
         this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+        this.ctx = canvas.getContext('2d', { willReadFrequently: true });
         this.tracker = null;
         this.roi = null;
         this.isTracking = false;

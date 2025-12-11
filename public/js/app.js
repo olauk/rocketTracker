@@ -115,6 +115,7 @@ function setupEventListeners() {
     // Tracking controls
     addListener('pauseTracking', 'click', pauseTracking);
     addListener('continueTracking', 'click', continueTracking);
+    addListener('undoManualPoint', 'click', undoManualPoint);
     addListener('stopTracking', 'click', stopTracking);
 
     // Results
@@ -239,7 +240,7 @@ function showSection(section) {
  */
 function initializeCalibration() {
     app.calibration.canvas = document.getElementById('calibrationCanvas');
-    app.calibration.ctx = app.calibration.canvas.getContext('2d');
+    app.calibration.ctx = app.calibration.canvas.getContext('2d', { willReadFrequently: true });
 
     // Set canvas size to match video
     app.calibration.canvas.width = app.video.videoWidth;
@@ -248,7 +249,7 @@ function initializeCalibration() {
     // Draw first frame
     app.video.currentTime = 0;
     app.video.onseeked = function() {
-        app.calibration.ctx.drawImage(app.video, 0, 0);
+        redrawCalibration(); // Use redrawCalibration to preserve the line
     };
 
     // Setup drawing
@@ -297,13 +298,11 @@ function setupCalibrationDrawing() {
  */
 function redrawCalibration() {
     const ctx = app.calibration.ctx;
-    const canvas = app.calibration.canvas;
 
-    // Clear and redraw video frame
-    app.video.currentTime = 0;
+    // Redraw video frame (video should already be at time 0)
     ctx.drawImage(app.video, 0, 0);
 
-    // Draw line
+    // Draw line if it exists
     if (app.calibration.startPoint && app.calibration.endPoint) {
         ctx.strokeStyle = '#00ff00';
         ctx.lineWidth = 3;
@@ -384,7 +383,7 @@ function confirmCalibration() {
  */
 function initializeROISelection() {
     app.roi.canvas = document.getElementById('roiCanvas');
-    app.roi.ctx = app.roi.canvas.getContext('2d');
+    app.roi.ctx = app.roi.canvas.getContext('2d', { willReadFrequently: true });
 
     // Set canvas size
     app.roi.canvas.width = app.video.videoWidth;
@@ -527,7 +526,8 @@ async function startTracking() {
         if (manualEnabled) {
             // Show manual tracking hint
             document.getElementById('manual-tracking-hint').style.display = 'block';
-            document.getElementById('continueTracking').style.display = 'inline-block';
+            document.getElementById('continueTracking').style.display = 'none';
+            document.getElementById('undoManualPoint').style.display = 'none';
 
             // Update status
             document.getElementById('tracking-status').innerHTML = `
@@ -592,13 +592,15 @@ function handleManualTrackingClick(event) {
     // Add manual point to tracker
     app.tracker.addManualPoint(x, y);
 
-    // Hide manual tracking hint
+    // Hide manual tracking hint, show action buttons
     document.getElementById('manual-tracking-hint').style.display = 'none';
+    document.getElementById('continueTracking').style.display = 'inline-block';
+    document.getElementById('undoManualPoint').style.display = 'inline-block';
 
     // Update status
     document.getElementById('tracking-status').innerHTML = `
         <strong>✓ Manuelt punkt lagt til</strong><br>
-        Trykk "Fortsett tracking" for å gjenoppta automatisk tracking.
+        Trykk "Fortsett tracking" for å gjenoppta, eller "Angre" for å prøve på nytt.
     `;
 }
 
@@ -608,8 +610,38 @@ function handleManualTrackingClick(event) {
 function continueTracking() {
     if (app.tracker && app.tracker.hasManualPoint) {
         document.getElementById('continueTracking').style.display = 'none';
+        document.getElementById('undoManualPoint').style.display = 'none';
         app.tracker.continueAfterManual();
     }
+}
+
+/**
+ * Undo manual tracking point
+ */
+function undoManualPoint() {
+    if (!app.tracker) return;
+
+    console.log('Angrer manuelt punkt');
+
+    // Clear the manual point
+    app.tracker.hasManualPoint = false;
+    app.tracker.manualPoint = null;
+
+    // Redraw the tracking canvas without the manual point
+    const canvas = document.getElementById('trackingCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(app.video, 0, 0);
+
+    // Hide buttons, show hint again
+    document.getElementById('continueTracking').style.display = 'none';
+    document.getElementById('undoManualPoint').style.display = 'none';
+    document.getElementById('manual-tracking-hint').style.display = 'block';
+
+    // Update status
+    document.getElementById('tracking-status').innerHTML = `
+        <strong>↩️ Manuelt punkt angret</strong><br>
+        Klikk på raketten i bildet for å legge til et nytt sporingspunkt.
+    `;
 }
 
 /**
