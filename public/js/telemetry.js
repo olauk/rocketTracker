@@ -119,8 +119,10 @@ class TelemetryCalculator {
     /**
      * Beregn ballistisk bane for launch-only modus
      * Brukes når videoen bare viser oppskytningen
+     * @param {number} diameter - Rakettens diameter i meter (default 0.05m = 5cm)
+     * @param {number} mass - Rakettens masse i kg (default 0.3kg = 300g)
      */
-    calculateBallisticTrajectory() {
+    calculateBallisticTrajectory(diameter = 0.05, mass = 0.3) {
         if (this.data.length === 0) {
             console.error('Ingen data å beregne ballistisk bane fra');
             return;
@@ -134,9 +136,13 @@ class TelemetryCalculator {
         const g = 9.81; // Tyngdeakselerasjon (m/s²)
         const rho = 1.225; // Lufttetthet ved havnivå (kg/m³)
         const Cd = 0.4; // Luftmotstandskoeffisient for rakett (typisk 0.3-0.5)
-        const estimatedDiameter = 0.05; // Estimert diameter 5 cm (kan justeres)
-        const A = Math.PI * Math.pow(estimatedDiameter / 2, 2); // Tverrsnittareal
-        const estimatedMass = 0.3; // Estimert masse 300g (kan justeres)
+        const A = Math.PI * Math.pow(diameter / 2, 2); // Tverrsnittareal fra brukerens diameter
+
+        console.log(`Rakettparametere for beregning:
+            - Diameter: ${(diameter * 100).toFixed(1)} cm
+            - Masse: ${(mass * 1000).toFixed(0)} g
+            - Tverrsnittareal: ${(A * 10000).toFixed(2)} cm²
+        `);
 
         // Start fra siste kjente punkt
         let currentAltitude = lastPoint.altitude;
@@ -171,7 +177,7 @@ class TelemetryCalculator {
 
             // Beregn luftmotstand
             const dragForce = 0.5 * rho * Math.pow(currentVelocity, 2) * Cd * A;
-            const dragAcceleration = dragForce / estimatedMass;
+            const dragAcceleration = dragForce / mass;
 
             // Total akselerasjon (tyngdekraft + luftmotstand)
             const acceleration = -g - dragAcceleration;

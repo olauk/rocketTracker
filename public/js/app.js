@@ -26,7 +26,11 @@ let app = {
     telemetry: null,
     visualizer: null,
     fps: 30,
-    calculationMode: 'full' // 'full' or 'ballistic'
+    calculationMode: 'full', // 'full' or 'ballistic'
+    rocketParams: {
+        diameter: 0.05, // 5 cm in meters (default)
+        mass: 0.3       // 300g in kg (default)
+    }
 };
 
 // Wait for OpenCV.js to load
@@ -111,6 +115,10 @@ function setupEventListeners() {
         radio.addEventListener('change', handleCalculationModeChange);
     });
     console.log('✓ Calculation mode event listeners added');
+
+    // Rocket parameters for ballistic mode
+    addListener('rocketDiameter', 'change', handleRocketParamsChange);
+    addListener('rocketMass', 'change', handleRocketParamsChange);
 
     // Calibration
     addListener('resetCalibration', 'click', resetCalibration);
@@ -238,6 +246,38 @@ function handleFPSChange(event) {
 function handleCalculationModeChange(event) {
     app.calculationMode = event.target.value;
     console.log('Beregningsmetode satt til:', app.calculationMode);
+
+    // Show/hide rocket parameters section
+    const rocketParams = document.getElementById('rocket-params');
+    if (rocketParams) {
+        if (app.calculationMode === 'ballistic') {
+            rocketParams.classList.remove('hidden');
+        } else {
+            rocketParams.classList.add('hidden');
+        }
+    }
+}
+
+/**
+ * Handle rocket parameters change
+ */
+function handleRocketParamsChange(event) {
+    const diameter = parseFloat(document.getElementById('rocketDiameter').value);
+    const mass = parseFloat(document.getElementById('rocketMass').value);
+
+    // Convert from cm to meters and g to kg
+    if (diameter > 0 && diameter <= 50) {
+        app.rocketParams.diameter = diameter / 100; // cm to m
+    }
+
+    if (mass > 0 && mass <= 5000) {
+        app.rocketParams.mass = mass / 1000; // g to kg
+    }
+
+    console.log('Rakettparametere oppdatert:', {
+        diameter: app.rocketParams.diameter + ' m',
+        mass: app.rocketParams.mass + ' kg'
+    });
 }
 
 /**
@@ -847,7 +887,10 @@ function processTrackingData(trackingData) {
     // If ballistic mode, calculate predicted trajectory
     if (app.calculationMode === 'ballistic') {
         console.log('Beregner ballistisk bane (kun oppskytning modus)');
-        app.telemetry.calculateBallisticTrajectory();
+        app.telemetry.calculateBallisticTrajectory(
+            app.rocketParams.diameter,
+            app.rocketParams.mass
+        );
     }
 
     // Get summary

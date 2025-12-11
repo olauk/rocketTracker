@@ -50,6 +50,26 @@
                         Velg "Kun oppskytning" hvis videoen bare viser oppskytningsfasen.
                     </p>
                 </div>
+                <div id="rocket-params" class="config-section hidden" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <label><strong>Rakettparametere for ballistisk beregning:</strong></label>
+                    <p class="help-text" style="margin-top: 5px;">Juster disse verdiene for å forbedre nøyaktigheten av prediksjonen.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                        <div>
+                            <label for="rocketDiameter">
+                                <strong>Diameter (cm):</strong>
+                                <input type="number" id="rocketDiameter" min="1" max="50" value="5" step="0.1" style="width: 100%; margin-top: 5px;">
+                            </label>
+                            <p class="help-text" style="margin-top: 3px; font-size: 0.85em;">Typisk 3-8 cm for modellraketter</p>
+                        </div>
+                        <div>
+                            <label for="rocketMass">
+                                <strong>Masse (gram):</strong>
+                                <input type="number" id="rocketMass" min="10" max="5000" value="300" step="10" style="width: 100%; margin-top: 5px;">
+                            </label>
+                            <p class="help-text" style="margin-top: 3px; font-size: 0.85em;">Inkludert motor, typisk 100-500g</p>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Fase 2: Kalibrering -->
