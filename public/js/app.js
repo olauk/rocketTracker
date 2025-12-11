@@ -25,7 +25,8 @@ let app = {
     tracker: null,
     telemetry: null,
     visualizer: null,
-    fps: 30
+    fps: 30,
+    calculationMode: 'full' // 'full' or 'ballistic'
 };
 
 // Wait for OpenCV.js to load
@@ -103,6 +104,13 @@ function setupEventListeners() {
 
     // FPS input
     addListener('fpsInput', 'change', handleFPSChange);
+
+    // Calculation mode selection
+    const modeRadios = document.querySelectorAll('input[name="calculationMode"]');
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', handleCalculationModeChange);
+    });
+    console.log('✓ Calculation mode event listeners added');
 
     // Calibration
     addListener('resetCalibration', 'click', resetCalibration);
@@ -194,6 +202,12 @@ function handleVideoUpload(event) {
                 fpsConfig.classList.remove('hidden');
             }
 
+            // Show calculation mode config
+            const modeConfig = document.getElementById('mode-config');
+            if (modeConfig) {
+                modeConfig.classList.remove('hidden');
+            }
+
             // Show calibration section
             showSection('calibration');
             initializeCalibration();
@@ -216,6 +230,14 @@ function handleFPSChange(event) {
         alert('FPS må være mellom 1 og 240');
         event.target.value = app.fps;
     }
+}
+
+/**
+ * Handle calculation mode change
+ */
+function handleCalculationModeChange(event) {
+    app.calculationMode = event.target.value;
+    console.log('Beregningsmetode satt til:', app.calculationMode);
 }
 
 /**
@@ -822,6 +844,12 @@ function processTrackingData(trackingData) {
     // Calculate derived metrics
     app.telemetry.calculateDerivedMetrics();
 
+    // If ballistic mode, calculate predicted trajectory
+    if (app.calculationMode === 'ballistic') {
+        console.log('Beregner ballistisk bane (kun oppskytning modus)');
+        app.telemetry.calculateBallisticTrajectory();
+    }
+
     // Get summary
     const summary = app.telemetry.getSummary();
     console.log('Telemetri summary:', summary);
@@ -835,6 +863,16 @@ function processTrackingData(trackingData) {
  * Display results
  */
 function displayResults(summary) {
+    // Show calculation mode info if ballistic
+    const modeInfo = document.getElementById('calculation-mode-info');
+    if (modeInfo) {
+        if (app.calculationMode === 'ballistic') {
+            modeInfo.classList.remove('hidden');
+        } else {
+            modeInfo.classList.add('hidden');
+        }
+    }
+
     // Update statistics
     app.visualizer.updateStatistics(summary);
 

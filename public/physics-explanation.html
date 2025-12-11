@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hvordan virker dette? - Rakett Tracker</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .physics-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .physics-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .physics-section h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        .formula {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .example {
+            background: #e8f4f8;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .back-button {
+            margin: 20px 0;
+        }
+
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+
+        .concept-list li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="physics-content">
+            <h1>📚 Hvordan virker Rakett Tracker?</h1>
+
+            <div class="back-button">
+                <a href="index.html" class="btn btn-secondary">← Tilbake til appen</a>
+            </div>
+
+            <div class="physics-section">
+                <h2>🎯 1. Kalibrering - Fra piksler til meter</h2>
+                <p>
+                    For å kunne måle virkelige avstander fra en video, må vi først <strong>kalibrere</strong> systemet.
+                    Dette gjør vi ved å bruke et objekt med kjent lengde (for eksempel en 1 meter lang stokk).
+                </p>
+
+                <div class="formula">
+                    Kalibreringsfaktor = Kjent lengde (meter) / Lengde i piksler
+                </div>
+
+                <div class="example">
+                    <strong>Eksempel:</strong><br>
+                    En 1 meter lang stokk måler 150 piksler i videoen.<br>
+                    Kalibreringsfaktor = 1 m / 150 px = 0,00667 m/px<br>
+                    <br>
+                    Dette betyr at hver piksel i videoen tilsvarer ca. 6,67 mm i virkeligheten.
+                </div>
+
+                <p>
+                    Når vi vet denne faktoren, kan vi enkelt konvertere alle pikselposisjoner til virkelige avstander:
+                </p>
+
+                <div class="formula">
+                    Virkelig avstand = Pikselavstand × Kalibreringsfaktor
+                </div>
+            </div>
+
+            <div class="physics-section">
+                <h2>📍 2. Posisjonssporing</h2>
+                <p>
+                    Appen bruker <strong>bildegjenkjenning</strong> (OpenCV.js) for å følge rakettens posisjon gjennom videoen.
+                    For hver ramme i videoen:
+                </p>
+
+                <ul class="concept-list">
+                    <li><strong>Tid:</strong> Beregnes fra rammenummer og videoens bildefrekvens (FPS)</li>
+                    <li><strong>X-posisjon:</strong> Horisontal posisjon i piksler → konverteres til meter</li>
+                    <li><strong>Y-posisjon:</strong> Vertikal posisjon i piksler → konverteres til meter (høyde)</li>
+                </ul>
+
+                <div class="formula">
+                    Tid = Rammenummer / FPS<br>
+                    Høyde = Y-posisjon × Kalibreringsfaktor
+                </div>
+
+                <div class="example">
+                    <strong>Eksempel:</strong><br>
+                    Video med 30 FPS, ramme nummer 60<br>
+                    Tid = 60 / 30 = 2,0 sekunder<br>
+                    <br>
+                    Rakettens Y-posisjon: 800 piksler<br>
+                    Høyde = 800 px × 0,00667 m/px = 5,34 meter
+                </div>
+            </div>
+
+            <div class="physics-section">
+                <h2>⚡ 3. Hastighetsberegning</h2>
+                <p>
+                    <strong>Hastighet</strong> er hvor raskt posisjonen endrer seg over tid.
+                    I fysikk kaller vi dette for den <em>deriverte</em> av posisjon:
+                </p>
+
+                <div class="formula">
+                    Hastighet = Endring i posisjon / Endring i tid<br>
+                    v = Δs / Δt
+                </div>
+
+                <p>
+                    I praksis beregner vi dette ved å sammenligne to påfølgende målinger:
+                </p>
+
+                <div class="formula">
+                    v = (s₂ - s₁) / (t₂ - t₁)
+                </div>
+
+                <div class="example">
+                    <strong>Eksempel:</strong><br>
+                    Ved t₁ = 2,0 s: høyde = 5,34 m<br>
+                    Ved t₂ = 2,1 s: høyde = 8,21 m<br>
+                    <br>
+                    Hastighet = (8,21 - 5,34) / (2,1 - 2,0)<br>
+                    Hastighet = 2,87 / 0,1 = 28,7 m/s
+                </div>
+
+                <p>
+                    <strong>Viktig:</strong> Appen beregner både vertikal (opp/ned) og horisontal (sideveis) hastighet,
+                    samt total hastighet ved hjelp av Pytagoras' setning:
+                </p>
+
+                <div class="formula">
+                    v_total = √(v_x² + v_y²)
+                </div>
+            </div>
+
+            <div class="physics-section">
+                <h2>🚀 4. Akselerasjonsberegning</h2>
+                <p>
+                    <strong>Akselerasjon</strong> er hvor raskt hastigheten endrer seg over tid.
+                    Dette er den <em>deriverte</em> av hastighet (eller den <em>dobbeltderiverte</em> av posisjon):
+                </p>
+
+                <div class="formula">
+                    Akselerasjon = Endring i hastighet / Endring i tid<br>
+                    a = Δv / Δt
+                </div>
+
+                <div class="example">
+                    <strong>Eksempel:</strong><br>
+                    Ved t₁ = 2,0 s: hastighet = 28,7 m/s<br>
+                    Ved t₂ = 2,1 s: hastighet = 25,3 m/s<br>
+                    <br>
+                    Akselerasjon = (25,3 - 28,7) / (2,1 - 2,0)<br>
+                    Akselerasjon = -3,4 / 0,1 = -34 m/s²
+                </div>
+
+                <p>
+                    Negativ akselerasjon betyr at raketten bremser ned. Dette skyldes:
+                </p>
+
+                <ul class="concept-list">
+                    <li><strong>Tyngdekraften:</strong> Trekker alltid nedover (g ≈ 9,81 m/s²)</li>
+                    <li><strong>Luftmotstand:</strong> Motvirker bevegelsen</li>
+                    <li><strong>Motoren:</strong> Gir kraft oppover (kun i oppskytningsfasen)</li>
+                </ul>
+            </div>
+
+            <div class="physics-section">
+                <h2>🎯 5. Ballistisk fysikk</h2>
+                <p>
+                    Når motoren har brent ut, følger raketten en <strong>ballistisk bane</strong>.
+                    Dette betyr at kun tyngdekraft og luftmotstand påvirker raketten.
+                </p>
+
+                <h3>5.1 Full bane-analyse</h3>
+                <p>
+                    Hvis du har video av hele rakettens bane, sporer appen raketten helt til den når toppen (apogeum).
+                    Appen finner automatisk:
+                </p>
+
+                <ul class="concept-list">
+                    <li><strong>Maksimal høyde:</strong> Det høyeste punktet i banen</li>
+                    <li><strong>Tid til apogeum:</strong> Hvor lang tid det tar å nå toppen</li>
+                    <li><strong>Maksimal hastighet:</strong> Normalt ved slutten av motorbrenningstiden</li>
+                </ul>
+
+                <h3>5.2 Kun oppskytning - Ballistisk beregning</h3>
+                <p>
+                    Hvis du bare har video av oppskytningen, kan appen <strong>beregne</strong> hvor høyt raketten kommer
+                    basert på hastigheten når videoen slutter.
+                </p>
+
+                <p>
+                    <strong>Forutsetninger:</strong>
+                </p>
+                <ul class="concept-list">
+                    <li>Videoen slutter mens raketten fortsatt stiger</li>
+                    <li>Motoren har brent ut</li>
+                    <li>Vi kjenner rakettens hastighet ved slutten av videoen</li>
+                </ul>
+
+                <p>
+                    <strong>Grunnleggende ballistisk ligning (uten luftmotstand):</strong>
+                </p>
+
+                <div class="formula">
+                    v² = v₀² - 2g(h - h₀)
+                </div>
+
+                <p>
+                    Ved apogeum (toppen) er hastigheten v = 0, så vi kan løse for maksimal høyde:
+                </p>
+
+                <div class="formula">
+                    0 = v₀² - 2g(h_max - h₀)<br>
+                    h_max = h₀ + v₀² / (2g)
+                </div>
+
+                <p>
+                    Der:
+                </p>
+                <ul class="concept-list">
+                    <li><strong>v₀</strong> = Hastighet ved slutten av videoen (m/s)</li>
+                    <li><strong>h₀</strong> = Høyde ved slutten av videoen (m)</li>
+                    <li><strong>g</strong> = Tyngdeakselerasjon (9,81 m/s²)</li>
+                    <li><strong>h_max</strong> = Beregnet maksimal høyde (m)</li>
+                </ul>
+
+                <div class="example">
+                    <strong>Eksempel (uten luftmotstand):</strong><br>
+                    Ved slutten av videoen:<br>
+                    - Høyde h₀ = 50 meter<br>
+                    - Vertikal hastighet v₀ = 40 m/s oppover<br>
+                    <br>
+                    Ekstra høyde = v₀² / (2g) = 40² / (2 × 9,81) = 1600 / 19,62 = 81,55 m<br>
+                    <br>
+                    Beregnet maksimal høyde = 50 + 81,55 = 131,55 meter
+                </div>
+
+                <h3>5.3 Korreksjon for luftmotstand</h3>
+                <p>
+                    I virkeligheten vil <strong>luftmotstanden</strong> bremse raketten, så den vil ikke komme like høyt
+                    som den enkle formelen predikerer. Appen bruker en forbedret modell som tar hensyn til dette:
+                </p>
+
+                <div class="formula">
+                    Luftmotstand = ½ × ρ × v² × C_d × A
+                </div>
+
+                <p>
+                    Der:
+                </p>
+                <ul class="concept-list">
+                    <li><strong>ρ</strong> (rho) = Lufttetthet (ca. 1,225 kg/m³ ved havnivå)</li>
+                    <li><strong>v</strong> = Hastighet (m/s)</li>
+                    <li><strong>C_d</strong> = Luftmotstandskoeffisient (typisk 0,3-0,5 for raketter)</li>
+                    <li><strong>A</strong> = Tverrsnittareal (m²)</li>
+                </ul>
+
+                <p>
+                    Appen bruker numerisk integrasjon for å beregne banen med luftmotstand inkludert.
+                    Dette gir et mer realistisk estimat, men krever antakelser om rakettens egenskaper.
+                </p>
+            </div>
+
+            <div class="physics-section">
+                <h2>📊 6. Databehandling og utjevning</h2>
+                <p>
+                    Videoer og bildegjenkjenning er ikke perfekte - det kan være små feil i målingene.
+                    For å få jevnere kurver, bruker appen <strong>glidende gjennomsnitt</strong>:
+                </p>
+
+                <div class="formula">
+                    Utjevnet verdi = Gjennomsnitt av nærmeste 5 målinger
+                </div>
+
+                <p>
+                    Dette reduserer støy i dataene og gjør grafene lettere å lese, spesielt for hastighet og akselerasjon
+                    som er følsomme for små endringer i posisjon.
+                </p>
+            </div>
+
+            <div class="physics-section">
+                <h2>🎓 Nøkkelbegreper oppsummert</h2>
+                <ul class="concept-list">
+                    <li><strong>Posisjon (s):</strong> Hvor objektet er (meter)</li>
+                    <li><strong>Hastighet (v):</strong> Hvor raskt posisjonen endrer seg (m/s)</li>
+                    <li><strong>Akselerasjon (a):</strong> Hvor raskt hastigheten endrer seg (m/s²)</li>
+                    <li><strong>Tyngdeakselerasjon (g):</strong> 9,81 m/s² nedover</li>
+                    <li><strong>Apogeum:</strong> Høyeste punkt i banen</li>
+                    <li><strong>Ballistisk bane:</strong> Bane kun påvirket av tyngdekraft og luftmotstand</li>
+                    <li><strong>Derivert:</strong> Matematisk mål på hvor raskt noe endrer seg</li>
+                </ul>
+            </div>
+
+            <div class="back-button">
+                <a href="index.html" class="btn btn-primary">← Tilbake til appen</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

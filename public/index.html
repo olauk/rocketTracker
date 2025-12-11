@@ -13,6 +13,11 @@
         <header>
             <h1>🚀 Rakett Tracker</h1>
             <p>Denne applikasjonen er laget som et hjelpemiddel for å analyser modellraketter med video-basert telemetri.</p>
+            <div style="margin-top: 15px;">
+                <a href="physics-explanation.html" class="btn btn-secondary" target="_blank">
+                    📚 Hvordan virker dette?
+                </a>
+            </div>
         </header>
 
         <main>
@@ -27,6 +32,23 @@
                         <input type="number" id="fpsInput" min="1" max="240" value="30" step="1">
                     </label>
                     <p class="help-text">Standard: 30 FPS. Juster hvis videoen din har annen hastighet (f.eks. 60 FPS).</p>
+                </div>
+                <div id="mode-config" class="config-section hidden">
+                    <label><strong>Velg beregningsmetode:</strong></label>
+                    <div style="margin-top: 10px;">
+                        <label style="display: block; margin: 10px 0;">
+                            <input type="radio" name="calculationMode" value="full" checked>
+                            <strong>Full bane</strong> - Videoen viser hele rakettens bane (anbefalt)
+                        </label>
+                        <label style="display: block; margin: 10px 0;">
+                            <input type="radio" name="calculationMode" value="ballistic">
+                            <strong>Kun oppskytning</strong> - Videoen viser bare oppskytningen, beregn totalhøyde med ballistisk ligning
+                        </label>
+                    </div>
+                    <p class="help-text">
+                        Velg "Full bane" hvis videoen viser raketten helt til den når toppen.
+                        Velg "Kun oppskytning" hvis videoen bare viser oppskytningsfasen.
+                    </p>
                 </div>
             </section>
 
@@ -112,6 +134,15 @@
             <!-- Fase 5: Resultater -->
             <section id="results-section" class="card hidden">
                 <h2>5. Resultater</h2>
+
+                <!-- Calculation mode info -->
+                <div id="calculation-mode-info" class="hidden" style="margin-bottom: 20px; padding: 15px; background: #e8f4f8; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                    <strong>ℹ️ Beregningsmetode: Ballistisk prediksjon</strong>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9em;">
+                        Maksimal høyde er beregnet basert på ballistiske ligninger fra siste målte punkt i videoen.
+                        Denne beregningen inkluderer luftmotstand og gir et estimat av hvor høyt raketten vil komme.
+                    </p>
+                </div>
 
                 <div class="stats-grid">
                     <div class="stat-card">

@@ -117,6 +117,106 @@ class TelemetryCalculator {
     }
 
     /**
+     * Beregn ballistisk bane for launch-only modus
+     * Brukes når videoen bare viser oppskytningen
+     */
+    calculateBallisticTrajectory() {
+        if (this.data.length === 0) {
+            console.error('Ingen data å beregne ballistisk bane fra');
+            return;
+        }
+
+        // Hent siste datapunkt (slutten av videoen)
+        const lastPoint = this.data[this.data.length - 1];
+        console.log('Beregner ballistisk bane fra siste punkt:', lastPoint);
+
+        // Konstanter
+        const g = 9.81; // Tyngdeakselerasjon (m/s²)
+        const rho = 1.225; // Lufttetthet ved havnivå (kg/m³)
+        const Cd = 0.4; // Luftmotstandskoeffisient for rakett (typisk 0.3-0.5)
+        const estimatedDiameter = 0.05; // Estimert diameter 5 cm (kan justeres)
+        const A = Math.PI * Math.pow(estimatedDiameter / 2, 2); // Tverrsnittareal
+        const estimatedMass = 0.3; // Estimert masse 300g (kan justeres)
+
+        // Start fra siste kjente punkt
+        let currentAltitude = lastPoint.altitude;
+        let currentVelocity = lastPoint.verticalVelocity || 0;
+        let currentTime = lastPoint.time;
+        let currentFrame = lastPoint.frame;
+
+        // Hvis raketten allerede er på vei ned, ikke beregn mer
+        if (currentVelocity <= 0) {
+            console.log('Raketten er allerede på vei ned, ingen ballistisk beregning nødvendig');
+            return;
+        }
+
+        console.log(`Start ballistisk beregning:
+            - Høyde: ${currentAltitude.toFixed(2)} m
+            - Hastighet: ${currentVelocity.toFixed(2)} m/s
+            - Tid: ${currentTime.toFixed(2)} s
+        `);
+
+        // Timestep for numerisk integrasjon
+        const dt = 1 / this.fps; // Samme som video framerate for konsistens
+
+        // Beregn ballistisk bane til apogeum
+        const ballisticPoints = [];
+        let steps = 0;
+        const maxSteps = 1000; // Sikkerhet mot uendelig løkke
+
+        while (currentVelocity > 0 && steps < maxSteps) {
+            steps++;
+            currentTime += dt;
+            currentFrame++;
+
+            // Beregn luftmotstand
+            const dragForce = 0.5 * rho * Math.pow(currentVelocity, 2) * Cd * A;
+            const dragAcceleration = dragForce / estimatedMass;
+
+            // Total akselerasjon (tyngdekraft + luftmotstand)
+            const acceleration = -g - dragAcceleration;
+
+            // Oppdater hastighet og posisjon (Euler's method)
+            currentVelocity += acceleration * dt;
+            currentAltitude += currentVelocity * dt;
+
+            // Lagre datapunkt
+            const predictedPoint = {
+                frame: currentFrame,
+                time: currentTime,
+                pixelX: lastPoint.pixelX, // Antar vertikal bevegelse
+                pixelY: lastPoint.pixelY,
+                horizontalPos: lastPoint.horizontalPos,
+                altitude: currentAltitude,
+                verticalVelocity: currentVelocity,
+                horizontalVelocity: 0, // Antar ingen horisontal bevegelse
+                totalVelocity: Math.abs(currentVelocity),
+                verticalAcceleration: acceleration,
+                horizontalAcceleration: 0,
+                totalAcceleration: Math.abs(acceleration),
+                angle: 0, // Vertikal
+                predicted: true // Marker som predikert data
+            };
+
+            ballisticPoints.push(predictedPoint);
+        }
+
+        // Legg til predikerte punkter til data
+        this.data = this.data.concat(ballisticPoints);
+
+        const predictedApogee = Math.max(...ballisticPoints.map(p => p.altitude));
+        console.log(`Ballistisk beregning fullført:
+            - Antall predikerte punkter: ${ballisticPoints.length}
+            - Predikert apogeum: ${predictedApogee.toFixed(2)} m
+            - Tid til apogeum: ${(currentTime - lastPoint.time).toFixed(2)} s ekstra
+        `);
+
+        // Enkel beregning uten luftmotstand (for sammenligning)
+        const simpleApogee = currentAltitude + Math.pow(lastPoint.verticalVelocity, 2) / (2 * g);
+        console.log(`Sammenligning: Apogeum uten luftmotstand = ${simpleApogee.toFixed(2)} m`);
+    }
+
+    /**
      * Smooth data med moving average
      */
     smoothData(windowSize = 3) {
@@ -249,7 +349,8 @@ class TelemetryCalculator {
             'Vertikal akselerasjon (m/s²)',
             'Horisontal akselerasjon (m/s²)',
             'Total akselerasjon (m/s²)',
-            'Vinkel fra vertikal (°)'
+            'Vinkel fra vertikal (°)',
+            'Type'
         ];
 
         let csv = headers.join(',') + '\n';
@@ -266,7 +367,8 @@ class TelemetryCalculator {
                 (point.verticalAcceleration || 0).toFixed(3),
                 (point.horizontalAcceleration || 0).toFixed(3),
                 (point.totalAcceleration || 0).toFixed(3),
-                (point.angle || 0).toFixed(2)
+                (point.angle || 0).toFixed(2),
+                point.predicted ? 'Predikert' : 'Sporet'
             ];
             csv += row.join(',') + '\n';
         });
